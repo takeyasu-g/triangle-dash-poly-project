@@ -11,6 +11,8 @@ public class Wall {
     public static final float GAP_SIZE = 235; // Size of the gap
     public static final float WALL_HEIGHT = 75; // Wall height
     private static Random random = new Random(); // Random generator for where gaps are
+    public boolean passed = false; // Track if player already passed this wall
+
 
     // Constructor: Creates a wall with a random gap at a given Y position
     public Wall(float gapX, float wallY, Viewport viewport) {
@@ -30,7 +32,10 @@ public class Wall {
         if (wallY < -WALL_HEIGHT) {
             wallY = highestWallY + wallSpacing; // Move back to the top of the list of 5 walls
             gapX = random.nextFloat() * (screenWidth - GAP_SIZE); // New random gap
+            passed = false; // Reset so it can be scored again
         }
+
+
     }
 }
 

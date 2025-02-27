@@ -2,15 +2,16 @@ package com.mygdx.triangledash;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.graphics.g2d.BitmapFont; // Add this at the top
+import com.badlogic.gdx.graphics.g2d.GlyphLayout; // Add this at the top
 
 import static com.mygdx.triangledash.Wall.GAP_SIZE;
 
@@ -42,6 +43,15 @@ public class TriangleDashGame extends ApplicationAdapter {
     private float wallSpeed = 300; // speed walls going down
     private float wallSpacing = 600; // Spacing between walls
 
+    // Game State
+    private enum GameState {PLAYING, GAME_OVER}
+
+    private GameState gameState = GameState.PLAYING;
+    private BitmapFont font; // Font for displaying text
+    private int score = 0; // Player's current score
+    private int highScore = 0; // Store highest score
+
+
     @Override
     public void create() {
         // create Textures , Sprites
@@ -68,6 +78,9 @@ public class TriangleDashGame extends ApplicationAdapter {
             float startY = viewport.getWorldHeight() + (i * wallSpacing);
             walls.add(new Wall(gapX, startY, viewport));
         }
+
+        font = new BitmapFont(); // Default LibGDX font
+        font.getData().setScale(3); // Make text bigger
     }
 
     @Override
@@ -120,6 +133,45 @@ public class TriangleDashGame extends ApplicationAdapter {
         for (Wall wall : walls) {
             wall.update(delta, wallSpeed, wallSpacing, highestWallY);
         }
+
+        // Increase score when a wall is passed successfully
+        for (Wall wall : walls) {
+            if (wall.wallY + Wall.WALL_HEIGHT < playerY && !wall.passed) {
+                wall.passed = true; // Mark this wall as passed
+                score++; // Increase score
+                System.out.println("Score: " + score); // Debug message
+            }
+        }
+
+        // Check collision after updating walls
+        for (Wall wall : walls) {
+            if (checkCollision(wall)) {
+                System.out.println("Game Over!"); // Debug message
+                scrollSpeed = 0; // Stop background scrolling
+                wallSpeed = 0; // Stop walls from moving
+                playerSpeed = 0; // Stop player movement
+                gameState = GameState.GAME_OVER; // Switch to Game Over mode
+
+            }
+        }
+    }
+
+    // Inside TriangleDashGame class:
+    public Rectangle getPlayerBounds() {
+        return new Rectangle(playerX, playerY, playerSize, playerSize);
+    }
+
+    public boolean checkCollision(Wall wall) {
+        Rectangle playerBounds = getPlayerBounds();
+
+        // Define left wall bounding box
+        Rectangle leftWall = new Rectangle(0, wall.wallY, wall.gapX, Wall.WALL_HEIGHT);
+
+        // Define right wall bounding box
+        Rectangle rightWall = new Rectangle(wall.gapX + Wall.GAP_SIZE, wall.wallY, viewport.getWorldWidth() - (wall.gapX + Wall.GAP_SIZE), Wall.WALL_HEIGHT);
+
+        // Check if player intersects with either left or right wall
+        return playerBounds.overlaps(leftWall) || playerBounds.overlaps(rightWall);
     }
 
 
@@ -169,16 +221,27 @@ public class TriangleDashGame extends ApplicationAdapter {
                 false, false                        // Flip texture
         );
 
+        if (gameState == GameState.GAME_OVER) {
+            GlyphLayout gameOverText = new GlyphLayout(font, "Game Over");
+            GlyphLayout scoreText = new GlyphLayout(font, "Score: " + score);
+            GlyphLayout highScoreText = new GlyphLayout(font, "Top Score: " + highScore);
+
+            float textX = (viewport.getWorldWidth() - gameOverText.width) / 2;
+            float textY = viewport.getWorldHeight() / 2;
+
+            float scoreX = (viewport.getWorldWidth() - scoreText.width) / 2;
+            float scoreY = textY - 50;
+
+            float highScoreX = (viewport.getWorldWidth() - highScoreText.width) / 2;
+            float highScoreY = scoreY - 50;
+
+            font.draw(spriteBatch, gameOverText, textX, textY);
+            font.draw(spriteBatch, scoreText, scoreX, scoreY);
+            font.draw(spriteBatch, highScoreText, highScoreX, highScoreY);
+        }
+
 
         spriteBatch.end();
-    }
-
-    public float getScrollSpeed() {
-        return scrollSpeed;
-    }
-
-    public void setScrollSpeed(float scrollSpeed) {
-        this.scrollSpeed = scrollSpeed;
     }
 
     @Override
