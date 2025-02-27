@@ -13,6 +13,8 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.graphics.g2d.BitmapFont; // Add this at the top
 import com.badlogic.gdx.graphics.g2d.GlyphLayout; // Add this at the top
 import com.badlogic.gdx.Preferences;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.Vector2;
 
 import static com.mygdx.triangledash.Wall.GAP_SIZE;
 
@@ -53,6 +55,13 @@ public class TriangleDashGame extends ApplicationAdapter {
     private int highScore = 0; // Store highest score
     private Preferences prefs;  // keeps saved data
 
+    // Button variables
+    private Texture playAgainTexture;
+    private TextureRegion playAgainRegion;
+    private Vector2 playAgainPosition;
+    private float playAgainWidth = 300;
+    private float playAgainHeight = 100;
+
 
     @Override
     public void create() {
@@ -88,6 +97,15 @@ public class TriangleDashGame extends ApplicationAdapter {
         // Make save for High score
         prefs = Gdx.app.getPreferences("TriangleDashPrefs"); // Create storage
         highScore = prefs.getInteger("highScore", 0); // Load saved high score
+
+        // Play again button
+        playAgainTexture = new Texture(Gdx.files.internal("new_game_btn.png"));
+        playAgainRegion = new TextureRegion(playAgainTexture);
+        playAgainPosition = new Vector2(
+                (viewport.getWorldWidth() - playAgainWidth) / 2,
+                viewport.getWorldHeight() / 2 - 260
+        );
+
 
     }
 
@@ -172,7 +190,36 @@ public class TriangleDashGame extends ApplicationAdapter {
                 return; // stops updates
             }
         }
+
     }
+
+    // Restart method
+    public void restartGame() {
+        // Reset player position
+        playerX = (viewport.getWorldWidth() / 2) - (playerSize / 2);
+        playerY = viewport.getWorldHeight() / 5;
+
+        // Reset movement
+        movingRight = true;
+        scrollSpeed = 100;
+        wallSpeed = 300;
+        playerSpeed = 400;
+
+        // Reset score
+        score = 0;
+
+        // Reset walls
+        walls.clear();
+        for (int i = 0; i < 5; i++) {
+            float gapX = (float) Math.random() * (viewport.getWorldWidth() - Wall.GAP_SIZE);
+            float startY = viewport.getWorldHeight() + (i * wallSpacing);
+            walls.add(new Wall(gapX, startY, viewport));
+        }
+
+        // Switch back to playing mode
+        gameState = GameState.PLAYING;
+    }
+
 
     // Inside TriangleDashGame class:
     public Rectangle getPlayerBounds() {
@@ -243,6 +290,8 @@ public class TriangleDashGame extends ApplicationAdapter {
             GlyphLayout gameOverText = new GlyphLayout(font, "Game Over");
             GlyphLayout scoreText = new GlyphLayout(font, "Score: " + score);
             GlyphLayout highScoreText = new GlyphLayout(font, "Top Score: " + highScore);
+            spriteBatch.draw(playAgainRegion, playAgainPosition.x, playAgainPosition.y, playAgainWidth, playAgainHeight);
+
 
             float textX = (viewport.getWorldWidth() - gameOverText.width) / 2;
             float textY = viewport.getWorldHeight() / 2;
@@ -256,6 +305,18 @@ public class TriangleDashGame extends ApplicationAdapter {
             font.draw(spriteBatch, gameOverText, textX, textY);
             font.draw(spriteBatch, scoreText, scoreX, scoreY);
             font.draw(spriteBatch, highScoreText, highScoreX, highScoreY);
+        }
+
+        // to restart Game on button click
+        if (gameState == GameState.GAME_OVER && Gdx.input.justTouched()) {
+            float touchX = Gdx.input.getX() * (viewport.getWorldWidth() / Gdx.graphics.getWidth());
+            float touchY = (Gdx.graphics.getHeight() - Gdx.input.getY()) * (viewport.getWorldHeight() / Gdx.graphics.getHeight());
+
+            if (touchX >= playAgainPosition.x && touchX <= playAgainPosition.x + playAgainWidth &&
+                    touchY >= playAgainPosition.y && touchY <= playAgainPosition.y + playAgainHeight) {
+
+                restartGame(); // Call restart function
+            }
         }
 
 
