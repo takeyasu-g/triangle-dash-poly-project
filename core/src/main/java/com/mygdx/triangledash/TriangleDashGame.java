@@ -12,6 +12,7 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.graphics.g2d.BitmapFont; // Add this at the top
 import com.badlogic.gdx.graphics.g2d.GlyphLayout; // Add this at the top
+import com.badlogic.gdx.Preferences;
 
 import static com.mygdx.triangledash.Wall.GAP_SIZE;
 
@@ -50,6 +51,7 @@ public class TriangleDashGame extends ApplicationAdapter {
     private BitmapFont font; // Font for displaying text
     private int score = 0; // Player's current score
     private int highScore = 0; // Store highest score
+    private Preferences prefs;  // keeps saved data
 
 
     @Override
@@ -79,8 +81,14 @@ public class TriangleDashGame extends ApplicationAdapter {
             walls.add(new Wall(gapX, startY, viewport));
         }
 
+        // fonts for text
         font = new BitmapFont(); // Default LibGDX font
         font.getData().setScale(3); // Make text bigger
+
+        // Make save for High score
+        prefs = Gdx.app.getPreferences("TriangleDashPrefs"); // Create storage
+        highScore = prefs.getInteger("highScore", 0); // Load saved high score
+
     }
 
     @Override
@@ -150,8 +158,18 @@ public class TriangleDashGame extends ApplicationAdapter {
                 scrollSpeed = 0; // Stop background scrolling
                 wallSpeed = 0; // Stop walls from moving
                 playerSpeed = 0; // Stop player movement
-                gameState = GameState.GAME_OVER; // Switch to Game Over mode
 
+                // Update high score if needed
+                if (score > highScore) {
+                    highScore = score;
+                    prefs.putInteger("highScore", highScore); // Save new high score
+                    prefs.flush(); // Write to storage
+                    System.out.println("New High Score Saved: " + highScore); // Debug message
+                }
+
+
+                gameState = GameState.GAME_OVER; // Switch to Game Over mode
+                return; // stops updates
             }
         }
     }
