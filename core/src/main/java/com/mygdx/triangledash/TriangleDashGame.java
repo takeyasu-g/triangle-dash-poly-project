@@ -2,6 +2,7 @@ package com.mygdx.triangledash;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
@@ -62,6 +63,12 @@ public class TriangleDashGame extends ApplicationAdapter {
     private float playAgainWidth = 300;
     private float playAgainHeight = 100;
 
+    // music
+    private Music menuMusic; // Background music for the main menu
+    private Music gameMusic; // Background music for gameplay
+    private float gameMusicVolume = 0.0f; // Start muted for fade-in effect
+    private boolean fadingIn = false; // Track if fade-in is happening
+
 
     @Override
     public void create() {
@@ -71,6 +78,7 @@ public class TriangleDashGame extends ApplicationAdapter {
         backgroundImage = new Texture(Gdx.files.internal("space_background2.png"));
         wallTexture = new Texture(Gdx.files.internal("wall_brick2.png"));
         walls = new Array<>();
+
 
         // Camera
         float virtualWidth = 720;
@@ -106,17 +114,56 @@ public class TriangleDashGame extends ApplicationAdapter {
                 viewport.getWorldHeight() / 2 - 260
         );
 
+        // Music menu bgm
+        menuMusic = Gdx.audio.newMusic(Gdx.files.internal("menu_bgm.mp3"));
+        menuMusic.setLooping(true); // Loop the music
+        menuMusic.setVolume(0.2f); // Set a lower volume
+        menuMusic.play(); // Start playing the music
+        // Music gameplay bgm
+        gameMusic = Gdx.audio.newMusic(Gdx.files.internal("bgm1.mp3"));
+        gameMusic.setLooping(true); // Loop the music
+        gameMusic.setVolume(0.0f); // Start at 0 volume (fade-in will increase this)
+
 
     }
 
     @Override
     public void render() {
+        float touchX = Gdx.input.getX() * (viewport.getWorldWidth() / Gdx.graphics.getWidth());
+        float touchY = (Gdx.graphics.getHeight() - Gdx.input.getY()) * (viewport.getWorldHeight() / Gdx.graphics.getHeight());
+
+        // Handle New Game button in the Main Menu
+        if (gameState == GameState.MENU && Gdx.input.justTouched()) {
+            if (touchX >= playAgainPosition.x && touchX <= playAgainPosition.x + playAgainWidth &&
+                    touchY >= playAgainPosition.y && touchY <= playAgainPosition.y + playAgainHeight) {
+
+                gameState = GameState.PLAYING; // Start the game
+                score = 0; // Reset score
+                menuMusic.stop(); // stop menu_bgm when gameState = PLAYING
+
+                // start gameplay bgm
+                gameMusic.play(); // Start game music
+                fadingIn = true; // Enable fade-in effect
+                gameMusic.setVolume(0.0f); // Ensure it starts at 0 volume
+            }
+        }
+
+        // Handle New Game button in the Game Over screen
+        if (gameState == GameState.GAME_OVER && Gdx.input.justTouched()) {
+            if (touchX >= playAgainPosition.x && touchX <= playAgainPosition.x + playAgainWidth &&
+                    touchY >= playAgainPosition.y && touchY <= playAgainPosition.y + playAgainHeight) {
+
+                restartGame(); // Restart the game properly
+            }
+        }
+
         if (gameState == GameState.PLAYING) {
             update(); // Only update if the game is in PLAYING mode
         }
+
         draw();
     }
-    
+
 
     // Update game logic
     public void update() {
@@ -126,6 +173,16 @@ public class TriangleDashGame extends ApplicationAdapter {
         backgroundY -= scrollSpeed * delta;
         if (backgroundY <= -1920) {
             backgroundY = 0;
+        }
+
+        // Fade in the game music
+        if (fadingIn) {
+            gameMusicVolume += Gdx.graphics.getDeltaTime() * 0.2f; // Increase volume gradually
+            if (gameMusicVolume >= 0.5f) { // Target volume level
+                gameMusicVolume = 0.5f;
+                fadingIn = false; // Stop fading in
+            }
+            gameMusic.setVolume(gameMusicVolume); // Apply volume change
         }
 
         // Handle player movement
@@ -223,13 +280,21 @@ public class TriangleDashGame extends ApplicationAdapter {
     }
 
 
-    // Inside TriangleDashGame class:
     public Rectangle getPlayerBounds() {
-        return new Rectangle(playerX, playerY, playerSize, playerSize);
+        float paddingX = playerSize * 0.2f; // Reduce width by 20%
+        float paddingY = playerSize * 0.3f; // Reduce height by 30%
+
+        return new Rectangle(
+                playerX + paddingX / 2, // Shift right slightly
+                playerY + paddingY / 2, // Shift up slightly
+                playerSize - paddingX,  // Reduce width
+                playerSize - paddingY   // Reduce height
+        );
     }
 
+
     public boolean checkCollision(Wall wall) {
-        Rectangle playerBounds = getPlayerBounds();
+        Rectangle playerBounds = getPlayerBounds(); // Use the smaller rectangle hitbox
 
         // Define left wall bounding box
         Rectangle leftWall = new Rectangle(0, wall.wallY, wall.gapX, Wall.WALL_HEIGHT);
@@ -237,7 +302,7 @@ public class TriangleDashGame extends ApplicationAdapter {
         // Define right wall bounding box
         Rectangle rightWall = new Rectangle(wall.gapX + Wall.GAP_SIZE, wall.wallY, viewport.getWorldWidth() - (wall.gapX + Wall.GAP_SIZE), Wall.WALL_HEIGHT);
 
-        // Check if player intersects with either left or right wall
+        // Check if player overlaps with either wall
         return playerBounds.overlaps(leftWall) || playerBounds.overlaps(rightWall);
     }
 
@@ -246,82 +311,18 @@ public class TriangleDashGame extends ApplicationAdapter {
     public void draw() {
         ScreenUtils.clear(Color.BLACK); // Clear screen
 
-        viewport.apply(); // Adapt to screen changes
-        camera.update(); // Update camera
+        viewport.apply();
+        camera.update();
         spriteBatch.setProjectionMatrix(viewport.getCamera().combined);
 
-        spriteBatch.begin();
+        spriteBatch.begin(); // Begin once
 
+        // Draw background (always visible)
         float worldWidth = viewport.getWorldWidth();
-
-        // Draw background
         spriteBatch.draw(backgroundImage, 0, backgroundY, worldWidth, 1920);
         spriteBatch.draw(backgroundImage, 0, backgroundY + 1920, worldWidth, 1920);
 
-        // Draw walls
-        for (Wall wall : walls) {
-            float rightWallX = wall.gapX + Wall.GAP_SIZE; // Right wall starts after gap
-
-            // Left Wall
-            if (wall.gapX > 0) {
-                spriteBatch.draw(wallTexture, 0, wall.wallY, wall.gapX, Wall.WALL_HEIGHT);
-            }
-
-            // Right Wall
-            if (rightWallX < viewport.getWorldWidth()) {
-                spriteBatch.draw(wallTexture, rightWallX, wall.wallY, viewport.getWorldWidth() - rightWallX, Wall.WALL_HEIGHT);
-            }
-        }
-
-        // Determine rotation angle based on movement direction
-        float rotationAngle = movingRight ? -45 : 45; // Rotate right when moving right, left when moving left
-
-        // Draw the rotated triangle
-        spriteBatch.draw(triangleTexture,
-                playerX, playerY,                  // Position
-                playerSize / 2, playerSize / 2,    // Rotation origin (center of the triangle)
-                playerSize, playerSize,            // Width and height
-                1, 1,                              // Scale
-                rotationAngle,                     // Rotation angle
-                0, 0,
-                triangleTexture.getWidth(), triangleTexture.getHeight(), // Source width/height
-                false, false                        // Flip texture
-        );
-
-        if (gameState == GameState.GAME_OVER) {
-            GlyphLayout gameOverText = new GlyphLayout(font, "Game Over");
-            GlyphLayout scoreText = new GlyphLayout(font, "Score: " + score);
-            GlyphLayout highScoreText = new GlyphLayout(font, "Top Score: " + highScore);
-            spriteBatch.draw(playAgainRegion, playAgainPosition.x, playAgainPosition.y, playAgainWidth, playAgainHeight);
-
-
-            float textX = (viewport.getWorldWidth() - gameOverText.width) / 2;
-            float textY = viewport.getWorldHeight() / 2;
-
-            float scoreX = (viewport.getWorldWidth() - scoreText.width) / 2;
-            float scoreY = textY - 50;
-
-            float highScoreX = (viewport.getWorldWidth() - highScoreText.width) / 2;
-            float highScoreY = scoreY - 50;
-
-            font.draw(spriteBatch, gameOverText, textX, textY);
-            font.draw(spriteBatch, scoreText, scoreX, scoreY);
-            font.draw(spriteBatch, highScoreText, highScoreX, highScoreY);
-        }
-
-        // to restart Game on button click
-        if (gameState == GameState.GAME_OVER && Gdx.input.justTouched()) {
-            float touchX = Gdx.input.getX() * (viewport.getWorldWidth() / Gdx.graphics.getWidth());
-            float touchY = (Gdx.graphics.getHeight() - Gdx.input.getY()) * (viewport.getWorldHeight() / Gdx.graphics.getHeight());
-
-            if (touchX >= playAgainPosition.x && touchX <= playAgainPosition.x + playAgainWidth &&
-                    touchY >= playAgainPosition.y && touchY <= playAgainPosition.y + playAgainHeight) {
-
-                restartGame(); // Call restart function
-            }
-        }
-
-        // Main Menu + new Game button click
+        // If in MENU, only draw the menu UI and exit
         if (gameState == GameState.MENU) {
             GlyphLayout titleText = new GlyphLayout(font, "Triangle Dash");
             GlyphLayout highScoreText = new GlyphLayout(font, "Top Score: " + highScore);
@@ -338,23 +339,68 @@ public class TriangleDashGame extends ApplicationAdapter {
             // Draw Play Button
             spriteBatch.draw(playAgainRegion, playAgainPosition.x, playAgainPosition.y, playAgainWidth, playAgainHeight);
 
-            // Detect Click on Play Button
-            if (Gdx.input.justTouched()) {
-                float touchX = Gdx.input.getX() * (viewport.getWorldWidth() / Gdx.graphics.getWidth());
-                float touchY = (Gdx.graphics.getHeight() - Gdx.input.getY()) * (viewport.getWorldHeight() / Gdx.graphics.getHeight());
+            spriteBatch.end(); // End the batch early and return
+            return;
+        }
 
-                if (touchX >= playAgainPosition.x && touchX <= playAgainPosition.x + playAgainWidth &&
-                        touchY >= playAgainPosition.y && touchY <= playAgainPosition.y + playAgainHeight) {
+        // Draw walls (only if game is running)
+        for (Wall wall : walls) {
+            float rightWallX = wall.gapX + Wall.GAP_SIZE; // Right wall starts after gap
 
-                    gameState = GameState.PLAYING; // Start the game
-                    score = 0; // Reset score
-                }
+            // Left Wall
+            if (wall.gapX > 0) {
+                spriteBatch.draw(wallTexture, 0, wall.wallY, wall.gapX, Wall.WALL_HEIGHT);
+            }
+
+            // Right Wall
+            if (rightWallX < viewport.getWorldWidth()) {
+                spriteBatch.draw(wallTexture, rightWallX, wall.wallY, viewport.getWorldWidth() - rightWallX, Wall.WALL_HEIGHT);
             }
         }
 
+        // Draw the player (only in PLAYING or GAME_OVER)
+        if (gameState == GameState.PLAYING || gameState == GameState.GAME_OVER) {
+            // Determine rotation angle based on movement direction
+            float rotationAngle = movingRight ? -45 : 45; // Rotate right when moving right, left when moving left
 
-        spriteBatch.end();
+            spriteBatch.draw(triangleTexture,
+                    playerX, playerY,                  // Position
+                    playerSize / 2, playerSize / 2,    // Rotation origin (center of the triangle)
+                    playerSize, playerSize,            // Width and height
+                    1, 1,                              // Scale
+                    rotationAngle,                     // Rotation angle
+                    0, 0,
+                    triangleTexture.getWidth(), triangleTexture.getHeight(), // Source width/height
+                    false, false                        // Flip texture
+            );
+        }
+
+
+        // If game is over, show "Game Over" screen
+        if (gameState == GameState.GAME_OVER) {
+            GlyphLayout gameOverText = new GlyphLayout(font, "Game Over");
+            GlyphLayout scoreText = new GlyphLayout(font, "Score: " + score);
+            GlyphLayout highScoreText = new GlyphLayout(font, "Top Score: " + highScore);
+
+            float textX = (viewport.getWorldWidth() - gameOverText.width) / 2;
+            float textY = viewport.getWorldHeight() / 2;
+
+            float scoreX = (viewport.getWorldWidth() - scoreText.width) / 2;
+            float scoreY = textY - 50;
+
+            float highScoreX = (viewport.getWorldWidth() - highScoreText.width) / 2;
+            float highScoreY = scoreY - 50;
+
+            font.draw(spriteBatch, gameOverText, textX, textY);
+            font.draw(spriteBatch, scoreText, scoreX, scoreY);
+            font.draw(spriteBatch, highScoreText, highScoreX, highScoreY);
+
+            spriteBatch.draw(playAgainRegion, playAgainPosition.x, playAgainPosition.y, playAgainWidth, playAgainHeight);
+        }
+
+        spriteBatch.end(); // End once at the bottom
     }
+
 
     @Override
     public void resize(int width, int height) {
