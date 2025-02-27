@@ -3,6 +3,7 @@ package com.mygdx.triangledash;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
@@ -68,6 +69,10 @@ public class TriangleDashGame extends ApplicationAdapter {
     private Music gameMusic; // Background music for gameplay
     private float gameMusicVolume = 0.0f; // Start muted for fade-in effect
     private boolean fadingIn = false; // Track if fade-in is happening
+    // sound effect
+    private Sound deathSound; // Sound effect for player death
+    private Sound pointSound; // Sound effect for passing through a gap
+    private Sound buttonClickSound; // Sound effect for clicking "Play"
 
 
     @Override
@@ -123,6 +128,10 @@ public class TriangleDashGame extends ApplicationAdapter {
         gameMusic = Gdx.audio.newMusic(Gdx.files.internal("bgm1.mp3"));
         gameMusic.setLooping(true); // Loop the music
         gameMusic.setVolume(0.0f); // Start at 0 volume (fade-in will increase this)
+        // sound effects
+        deathSound = Gdx.audio.newSound(Gdx.files.internal("boom.wav")); // Load the sound
+        pointSound = Gdx.audio.newSound(Gdx.files.internal("coin.wav"));
+        buttonClickSound = Gdx.audio.newSound(Gdx.files.internal("confirm.wav")); // Load the sound
 
 
     }
@@ -136,6 +145,9 @@ public class TriangleDashGame extends ApplicationAdapter {
         if (gameState == GameState.MENU && Gdx.input.justTouched()) {
             if (touchX >= playAgainPosition.x && touchX <= playAgainPosition.x + playAgainWidth &&
                     touchY >= playAgainPosition.y && touchY <= playAgainPosition.y + playAgainHeight) {
+
+                // click sound effect
+                buttonClickSound.play(0.2f);
 
                 gameState = GameState.PLAYING; // Start the game
                 score = 0; // Reset score
@@ -152,6 +164,9 @@ public class TriangleDashGame extends ApplicationAdapter {
         if (gameState == GameState.GAME_OVER && Gdx.input.justTouched()) {
             if (touchX >= playAgainPosition.x && touchX <= playAgainPosition.x + playAgainWidth &&
                     touchY >= playAgainPosition.y && touchY <= playAgainPosition.y + playAgainHeight) {
+
+                // click sound effect
+                buttonClickSound.play(0.2f);
 
                 restartGame(); // Restart the game properly
             }
@@ -224,6 +239,10 @@ public class TriangleDashGame extends ApplicationAdapter {
             if (wall.wallY + Wall.WALL_HEIGHT < playerY && !wall.passed) {
                 wall.passed = true; // Mark this wall as passed
                 score++; // Increase score
+
+                // play pointSound
+                pointSound.play(0.6f);
+
                 System.out.println("Score: " + score); // Debug message
             }
         }
@@ -275,6 +294,14 @@ public class TriangleDashGame extends ApplicationAdapter {
             walls.add(new Wall(gapX, startY, viewport));
         }
 
+        // menuMusic stop
+        menuMusic.stop();
+
+        // restart gameMusic
+        gameMusic.play();
+        gameMusic.setVolume(0.0f); // Start at 0 volume
+        fadingIn = true; // Enable fade-in effect
+
         // Switch back to playing mode
         gameState = GameState.PLAYING;
     }
@@ -294,7 +321,7 @@ public class TriangleDashGame extends ApplicationAdapter {
 
 
     public boolean checkCollision(Wall wall) {
-        Rectangle playerBounds = getPlayerBounds(); // Use the smaller rectangle hitbox
+        Rectangle playerBounds = getPlayerBounds(); // Use rectangle collision
 
         // Define left wall bounding box
         Rectangle leftWall = new Rectangle(0, wall.wallY, wall.gapX, Wall.WALL_HEIGHT);
@@ -303,7 +330,23 @@ public class TriangleDashGame extends ApplicationAdapter {
         Rectangle rightWall = new Rectangle(wall.gapX + Wall.GAP_SIZE, wall.wallY, viewport.getWorldWidth() - (wall.gapX + Wall.GAP_SIZE), Wall.WALL_HEIGHT);
 
         // Check if player overlaps with either wall
-        return playerBounds.overlaps(leftWall) || playerBounds.overlaps(rightWall);
+        if (playerBounds.overlaps(leftWall) || playerBounds.overlaps(rightWall)) {
+            // play death sound effect
+            deathSound.play(0.7f);
+
+            // Stop game music
+            gameMusic.stop();
+            fadingIn = false; // Cancel fade-in if still running
+
+            // Restart menu music
+            if (!menuMusic.isPlaying()) {
+                menuMusic.play();
+            }
+
+            return true; // Collision detected
+        }
+
+        return false; // No collision
     }
 
 
@@ -356,6 +399,17 @@ public class TriangleDashGame extends ApplicationAdapter {
             if (rightWallX < viewport.getWorldWidth()) {
                 spriteBatch.draw(wallTexture, rightWallX, wall.wallY, viewport.getWorldWidth() - rightWallX, Wall.WALL_HEIGHT);
             }
+        }
+
+        // Display score in the top left (only when playing)
+        if (gameState == GameState.PLAYING) {
+            font.setColor(Color.WHITE); // Set text color to white
+            String scoreText = "Score: " + score;
+
+            float scoreX = 20; // Left padding
+            float scoreY = viewport.getWorldHeight() - 20; // Top padding
+
+            font.draw(spriteBatch, scoreText, scoreX, scoreY);
         }
 
         // Draw the player (only in PLAYING or GAME_OVER)
@@ -412,5 +466,14 @@ public class TriangleDashGame extends ApplicationAdapter {
         spriteBatch.dispose();
         backgroundImage.dispose();
         triangleTexture.dispose();
+        wallTexture.dispose();
+        font.dispose();
+
+        // Dispose music and sound effects
+        menuMusic.dispose();
+        gameMusic.dispose();
+        deathSound.dispose();
+        pointSound.dispose();
     }
+
 }
