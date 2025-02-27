@@ -38,14 +38,14 @@ public class TriangleDashGame extends ApplicationAdapter {
 
     // Player (Triangle Ship)
     private float playerX, playerY;
-    private float playerSpeed = 400; // Speed of diagonal movement
+    private float playerSpeed = 475; // Speed of diagonal movement
     private boolean movingRight = true; // Direction control
     private float playerSize = 75; // Triangle texture size
 
     // Wall
     private Texture wallTexture;
     private Array<Wall> walls; // array of Wall class
-    private float wallSpeed = 500; // speed walls going down
+    private float wallSpeed = 675; // speed walls going down
     private float wallSpacing = 600; // Spacing between walls
 
     // Game State
@@ -280,8 +280,8 @@ public class TriangleDashGame extends ApplicationAdapter {
         // Reset movement
         movingRight = true;
         scrollSpeed = 100;
-        wallSpeed = 500;
-        playerSpeed = 400;
+        wallSpeed = 675;
+        playerSpeed = 475;
 
         // Reset score
         score = 0;
