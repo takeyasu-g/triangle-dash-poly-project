@@ -47,9 +47,9 @@ public class TriangleDashGame extends ApplicationAdapter {
     private float wallSpacing = 600; // Spacing between walls
 
     // Game State
-    private enum GameState {PLAYING, GAME_OVER}
+    private enum GameState {MENU, PLAYING, GAME_OVER}
 
-    private GameState gameState = GameState.PLAYING;
+    private GameState gameState = GameState.MENU; // Start in the Menu
     private BitmapFont font; // Font for displaying text
     private int score = 0; // Player's current score
     private int highScore = 0; // Store highest score
@@ -111,10 +111,12 @@ public class TriangleDashGame extends ApplicationAdapter {
 
     @Override
     public void render() {
-        update();
+        if (gameState == GameState.PLAYING) {
+            update(); // Only update if the game is in PLAYING mode
+        }
         draw();
-
     }
+    
 
     // Update game logic
     public void update() {
@@ -316,6 +318,37 @@ public class TriangleDashGame extends ApplicationAdapter {
                     touchY >= playAgainPosition.y && touchY <= playAgainPosition.y + playAgainHeight) {
 
                 restartGame(); // Call restart function
+            }
+        }
+
+        // Main Menu + new Game button click
+        if (gameState == GameState.MENU) {
+            GlyphLayout titleText = new GlyphLayout(font, "Triangle Dash");
+            GlyphLayout highScoreText = new GlyphLayout(font, "Top Score: " + highScore);
+
+            float titleX = (viewport.getWorldWidth() - titleText.width) / 2;
+            float titleY = viewport.getWorldHeight() / 1.5f;
+
+            float highScoreX = (viewport.getWorldWidth() - highScoreText.width) / 2;
+            float highScoreY = titleY - 100;
+
+            font.draw(spriteBatch, titleText, titleX, titleY);
+            font.draw(spriteBatch, highScoreText, highScoreX, highScoreY);
+
+            // Draw Play Button
+            spriteBatch.draw(playAgainRegion, playAgainPosition.x, playAgainPosition.y, playAgainWidth, playAgainHeight);
+
+            // Detect Click on Play Button
+            if (Gdx.input.justTouched()) {
+                float touchX = Gdx.input.getX() * (viewport.getWorldWidth() / Gdx.graphics.getWidth());
+                float touchY = (Gdx.graphics.getHeight() - Gdx.input.getY()) * (viewport.getWorldHeight() / Gdx.graphics.getHeight());
+
+                if (touchX >= playAgainPosition.x && touchX <= playAgainPosition.x + playAgainWidth &&
+                        touchY >= playAgainPosition.y && touchY <= playAgainPosition.y + playAgainHeight) {
+
+                    gameState = GameState.PLAYING; // Start the game
+                    score = 0; // Reset score
+                }
             }
         }
 
