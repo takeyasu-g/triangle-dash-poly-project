@@ -45,7 +45,7 @@ public class TriangleDashGame extends ApplicationAdapter {
     // Wall
     private Texture wallTexture;
     private Array<Wall> walls; // array of Wall class
-    private float wallSpeed = 300; // speed walls going down
+    private float wallSpeed = 500; // speed walls going down
     private float wallSpacing = 600; // Spacing between walls
 
     // Game State
@@ -280,7 +280,7 @@ public class TriangleDashGame extends ApplicationAdapter {
         // Reset movement
         movingRight = true;
         scrollSpeed = 100;
-        wallSpeed = 300;
+        wallSpeed = 500;
         playerSpeed = 400;
 
         // Reset score
