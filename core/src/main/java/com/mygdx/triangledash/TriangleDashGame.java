@@ -2,6 +2,7 @@ package com.mygdx.triangledash;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
@@ -142,7 +143,12 @@ public class TriangleDashGame extends ApplicationAdapter {
         float touchY = (Gdx.graphics.getHeight() - Gdx.input.getY()) * (viewport.getWorldHeight() / Gdx.graphics.getHeight());
 
         // Handle New Game button in the Main Menu
-        if (gameState == GameState.MENU && Gdx.input.justTouched()) {
+        if (gameState == GameState.MENU && (Gdx.input.justTouched() || Gdx.input.isKeyJustPressed(Input.Keys.SPACE))) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+                touchX = playAgainPosition.x;
+                touchY = playAgainPosition.y;
+            }
+
             if (touchX >= playAgainPosition.x && touchX <= playAgainPosition.x + playAgainWidth &&
                     touchY >= playAgainPosition.y && touchY <= playAgainPosition.y + playAgainHeight) {
 
@@ -161,7 +167,12 @@ public class TriangleDashGame extends ApplicationAdapter {
         }
 
         // Handle New Game button in the Game Over screen
-        if (gameState == GameState.GAME_OVER && Gdx.input.justTouched()) {
+        if (gameState == GameState.GAME_OVER && (Gdx.input.justTouched() || Gdx.input.isKeyJustPressed(Input.Keys.SPACE))) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+                touchX = playAgainPosition.x;
+                touchY = playAgainPosition.y;
+            }
+
             if (touchX >= playAgainPosition.x && touchX <= playAgainPosition.x + playAgainWidth &&
                     touchY >= playAgainPosition.y && touchY <= playAgainPosition.y + playAgainHeight) {
 
@@ -308,7 +319,7 @@ public class TriangleDashGame extends ApplicationAdapter {
 
 
     public Rectangle getPlayerBounds() {
-        float paddingX = playerSize * 0.2f; // Reduce width by 20%
+        float paddingX = playerSize * 0.47f; // Reduce width by 20%
         float paddingY = playerSize * 0.3f; // Reduce height by 30%
 
         return new Rectangle(
@@ -468,12 +479,14 @@ public class TriangleDashGame extends ApplicationAdapter {
         triangleTexture.dispose();
         wallTexture.dispose();
         font.dispose();
+        playAgainTexture.dispose();
 
         // Dispose music and sound effects
         menuMusic.dispose();
         gameMusic.dispose();
         deathSound.dispose();
         pointSound.dispose();
+        buttonClickSound.dispose();
     }
 
 }
